@@ -9,7 +9,11 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "perf": "npm run build && npm start",
-    "analyze": "ANALYZE=true npm run build"
+    "analyze": "ANALYZE=true npm run build",
+    "db:seed": "node prisma/seed.js"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.19.3",

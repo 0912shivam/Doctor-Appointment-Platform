@@ -1,22 +1,27 @@
 "use server";
 
-import { db } from "@/lib/prisma";
+// import { db } from "@/lib/prisma";
+import { getMockDoctorsBySpecialty } from "@/lib/mock-doctors";
 
 /**
  * Get doctors by specialty
  */
 export async function getDoctorsBySpecialty(specialty) {
   try {
-    const doctors = await db.user.findMany({
-      where: {
-        role: "DOCTOR",
-        verificationStatus: "VERIFIED",
-        specialty: specialty.split("%20").join(" "),
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
+    // Using mock data instead of database
+    const doctors = getMockDoctorsBySpecialty(specialty);
+
+    // Uncomment below to use real database
+    // const doctors = await db.user.findMany({
+    //   where: {
+    //     role: "DOCTOR",
+    //     verificationStatus: "VERIFIED",
+    //     specialty: specialty.split("%20").join(" "),
+    //   },
+    //   orderBy: {
+    //     name: "asc",
+    //   },
+    // });
 
     return { doctors };
   } catch (error) {
