@@ -30,27 +30,10 @@ try {
 
 /**
  * Book a new appointment with a doctor
+ * (Mock implementation for demo - no database or video session creation)
  */
 export async function bookAppointment(formData) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return { success: false, error: "Unauthorized. Please sign in to book an appointment." };
-    }
-
-    // Get the patient user
-    const patient = await db.user.findUnique({
-      where: {
-        clerkUserId: userId,
-        role: "PATIENT",
-      },
-    });
-
-    if (!patient) {
-      return { success: false, error: "Patient account not found. Please complete onboarding." };
-    }
-
     // Parse form data
     const doctorId = formData.get("doctorId");
     const startTime = new Date(formData.get("startTime"));
@@ -62,100 +45,42 @@ export async function bookAppointment(formData) {
       return { success: false, error: "Doctor, start time, and end time are required." };
     }
 
-    // Check if the doctor exists and is verified
-    const doctor = await db.user.findUnique({
-      where: {
-        id: doctorId,
-        role: "DOCTOR",
-        verificationStatus: "VERIFIED",
-      },
-    });
+    // Check if the doctor exists in mock data
+    const doctor = getMockDoctorById(doctorId);
 
     if (!doctor) {
-      return { success: false, error: "Doctor not found or not verified." };
+      return { success: false, error: "Doctor not found." };
     }
 
-    // Check if the patient has enough credits (2 credits per appointment)
-    if (patient.credits < 2) {
-      console.error(`Patient ${patient.id} has insufficient credits: ${patient.credits}`);
-      return { success: false, error: `Insufficient credits to book an appointment. You have ${patient.credits} credits, but need 2 credits.` };
-    }
+    // Simulate successful booking with mock data
+    // In a real app, this would:
+    // - Check patient authentication
+    // - Verify credits
+    // - Check time slot availability
+    // - Create video session
+    // - Deduct credits
+    // - Save to database
+    
+    // Simulate a slight delay to mimic network request
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Check if the requested time slot is available
-    const overlappingAppointment = await db.appointment.findFirst({
-      where: {
-        doctorId: doctorId,
-        status: "SCHEDULED",
-        OR: [
-          {
-            // New appointment starts during an existing appointment
-            startTime: {
-              lte: startTime,
-            },
-            endTime: {
-              gt: startTime,
-            },
-          },
-          {
-            // New appointment ends during an existing appointment
-            startTime: {
-              lt: endTime,
-            },
-            endTime: {
-              gte: endTime,
-            },
-          },
-          {
-            // New appointment completely overlaps an existing appointment
-            startTime: {
-              gte: startTime,
-            },
-            endTime: {
-              lte: endTime,
-            },
-          },
-        ],
-      },
-    });
-
-    if (overlappingAppointment) {
-      return { success: false, error: "This time slot is already booked. Please select another time." };
-    }
-
-    // Create a new Vonage Video API session
-    let sessionId;
-    try {
-      sessionId = await createVideoSession();
-    } catch (videoError) {
-      console.error("Video session creation failed:", videoError);
-      return { success: false, error: "Failed to create video session. Please try again later." };
-    }
-
-    // Deduct credits from patient and add to doctor
-    const { success, error } = await deductCreditsForAppointment(
-      patient.id,
-      doctor.id
-    );
-
-    if (!success) {
-      return { success: false, error: error || "Failed to deduct credits. Please try again." };
-    }
-
-    // Create the appointment with the video session ID
-    const appointment = await db.appointment.create({
-      data: {
-        patientId: patient.id,
-        doctorId: doctor.id,
-        startTime,
-        endTime,
-        patientDescription,
-        status: "SCHEDULED",
-        videoSessionId: sessionId, // Store the Vonage session ID
-      },
-    });
+    const mockAppointment = {
+      id: `appt_${Date.now()}`,
+      doctorId: doctor.id,
+      doctorName: doctor.name,
+      patientDescription,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      status: "SCHEDULED",
+      createdAt: new Date().toISOString(),
+    };
 
     revalidatePath("/appointments");
-    return { success: true, appointment: appointment };
+    return { 
+      success: true, 
+      appointment: mockAppointment,
+      message: "Appointment booked successfully! (Demo mode - no actual booking created)"
+    };
   } catch (error) {
     console.error("Failed to book appointment:", error);
     return { 
