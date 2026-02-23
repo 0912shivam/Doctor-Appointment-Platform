@@ -331,34 +331,56 @@ export async function getAvailableTimeSlots(doctorId) {
 
     // Generate mock time slots for the next 4 days
     const now = new Date();
-    const availableSlotsByDay = {};
+    const days = [];
 
     for (let i = 0; i < 4; i++) {
       const day = new Date(now);
       day.setDate(day.getDate() + i);
       const dayString = day.toISOString().split('T')[0];
       
-      availableSlotsByDay[dayString] = [];
+      const slots = [];
       
-      // Generate slots from 9 AM to 5 PM (every hour)
+      // Generate slots from 9 AM to 5 PM (every 30 minutes)
       for (let hour = 9; hour <= 17; hour++) {
-        const slotTime = new Date(day);
-        slotTime.setHours(hour, 0, 0, 0);
-        
-        availableSlotsByDay[dayString].push({
-          time: slotTime.toISOString(),
-          available: Math.random() > 0.3 // 70% slots available randomly
+        for (let minute = 0; minute < 60; minute += 30) {
+          const startTime = new Date(day);
+          startTime.setHours(hour, minute, 0, 0);
+          
+          const endTime = new Date(startTime);
+          endTime.setMinutes(endTime.getMinutes() + 30);
+          
+          // Skip past slots
+          if (startTime < now) continue;
+          
+          // Format time
+          const formatTime = (date) => {
+            const hours = date.getHours();
+            const minutes = date.getMinutes();
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            const displayMinutes = minutes.toString().padStart(2, '0');
+            return `${displayHours}:${displayMinutes} ${ampm}`;
+          };
+          
+          slots.push({
+            startTime: startTime.toISOString(),
+            endTime: endTime.toISOString(),
+            formatted: `${formatTime(startTime)} - ${formatTime(endTime)}`,
+            day: day.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+          });
+        }
+      }
+      
+      if (slots.length > 0) {
+        days.push({
+          date: dayString,
+          displayDate: slots[0].day,
+          slots: slots
         });
       }
     }
 
-    return {
-      success: true,
-      slots: availableSlotsByDay,
-      totalSlots: Object.values(availableSlotsByDay).reduce((acc, slots) => 
-        acc + slots.filter(s => s.available).length, 0
-      ),
-    };
+    return { days };
 
     // Uncomment below to use real database
     // const doctor = await db.user.findUnique({
