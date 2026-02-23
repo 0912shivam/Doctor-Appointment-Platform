@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/prisma";
+import { getMockDoctorById } from "@/lib/mock-doctors";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { deductCreditsForAppointment } from "@/actions/credits";
@@ -290,13 +291,17 @@ export async function generateVideoToken(formData) {
  */
 export async function getDoctorById(doctorId) {
   try {
-    const doctor = await db.user.findUnique({
-      where: {
-        id: doctorId,
-        role: "DOCTOR",
-        verificationStatus: "VERIFIED",
-      },
-    });
+    // Using mock data instead of database
+    const doctor = getMockDoctorById(doctorId);
+
+    // Uncomment below to use real database
+    // const doctor = await db.user.findUnique({
+    //   where: {
+    //     id: doctorId,
+    //     role: "DOCTOR",
+    //     verificationStatus: "VERIFIED",
+    //   },
+    // });
 
     if (!doctor) {
       return { success: false, error: "Doctor not found or not verified." };
@@ -317,126 +322,162 @@ export async function getDoctorById(doctorId) {
  */
 export async function getAvailableTimeSlots(doctorId) {
   try {
-    // Validate doctor existence and verification
-    const doctor = await db.user.findUnique({
-      where: {
-        id: doctorId,
-        role: "DOCTOR",
-        verificationStatus: "VERIFIED",
-      },
-    });
-
+    // Using mock data - return mock availability
+    const doctor = getMockDoctorById(doctorId);
+    
     if (!doctor) {
       throw new Error("Doctor not found or not verified");
     }
 
-    // Fetch a single availability record
-    const availability = await db.availability.findFirst({
-      where: {
-        doctorId: doctor.id,
-        status: "AVAILABLE",
-      },
-    });
-
-    if (!availability) {
-      throw new Error("No availability set by doctor");
-    }
-
-    // Get the next 4 days
+    // Generate mock time slots for the next 4 days
     const now = new Date();
-    const days = [now, addDays(now, 1), addDays(now, 2), addDays(now, 3)];
-
-    // Fetch existing appointments for the doctor over the next 4 days
-    const lastDay = endOfDay(days[3]);
-    const existingAppointments = await db.appointment.findMany({
-      where: {
-        doctorId: doctor.id,
-        status: "SCHEDULED",
-        startTime: {
-          lte: lastDay,
-        },
-      },
-    });
-
     const availableSlotsByDay = {};
 
-    // For each of the next 4 days, generate available slots
-    for (const day of days) {
-      const dayString = format(day, "yyyy-MM-dd");
+    for (let i = 0; i < 4; i++) {
+      const day = new Date(now);
+      day.setDate(day.getDate() + i);
+      const dayString = day.toISOString().split('T')[0];
+      
       availableSlotsByDay[dayString] = [];
-
-      // Create a copy of the availability start/end times for this day
-      const availabilityStart = new Date(availability.startTime);
-      const availabilityEnd = new Date(availability.endTime);
-
-      // Set the day to the current day we're processing
-      availabilityStart.setFullYear(
-        day.getFullYear(),
-        day.getMonth(),
-        day.getDate()
-      );
-      availabilityEnd.setFullYear(
-        day.getFullYear(),
-        day.getMonth(),
-        day.getDate()
-      );
-
-      let current = new Date(availabilityStart);
-      const end = new Date(availabilityEnd);
-
-      while (
-        isBefore(addMinutes(current, 30), end) ||
-        +addMinutes(current, 30) === +end
-      ) {
-        const next = addMinutes(current, 30);
-
-        // Skip past slots
-        if (isBefore(current, now)) {
-          current = next;
-          continue;
-        }
-
-        const overlaps = existingAppointments.some((appointment) => {
-          const aStart = new Date(appointment.startTime);
-          const aEnd = new Date(appointment.endTime);
-
-          return (
-            (current >= aStart && current < aEnd) ||
-            (next > aStart && next <= aEnd) ||
-            (current <= aStart && next >= aEnd)
-          );
+      
+      // Generate slots from 9 AM to 5 PM (every hour)
+      for (let hour = 9; hour <= 17; hour++) {
+        const slotTime = new Date(day);
+        slotTime.setHours(hour, 0, 0, 0);
+        
+        availableSlotsByDay[dayString].push({
+          time: slotTime.toISOString(),
+          available: Math.random() > 0.3 // 70% slots available randomly
         });
-
-        if (!overlaps) {
-          availableSlotsByDay[dayString].push({
-            startTime: current.toISOString(),
-            endTime: next.toISOString(),
-            formatted: `${format(current, "h:mm a")} - ${format(
-              next,
-              "h:mm a"
-            )}`,
-            day: format(current, "EEEE, MMMM d"),
-          });
-        }
-
-        current = next;
       }
     }
 
-    // Convert to array of slots grouped by day for easier consumption by the UI
-    const result = Object.entries(availableSlotsByDay).map(([date, slots]) => ({
-      date,
-      displayDate:
-        slots.length > 0
-          ? slots[0].day
-          : format(new Date(date), "EEEE, MMMM d"),
-      slots,
-    }));
+    return {
+      success: true,
+      slots: availableSlotsByDay,
+      totalSlots: Object.values(availableSlotsByDay).reduce((acc, slots) => 
+        acc + slots.filter(s => s.available).length, 0
+      ),
+    };
 
-    return { days: result };
+    // Uncomment below to use real database
+    // const doctor = await db.user.findUnique({
+    //   where: {
+    //     id: doctorId,
+    //     role: "DOCTOR",
+    //     verificationStatus: "VERIFIED",
+    //   },
+    // });
+
+    // if (!doctor) {
+    //   throw new Error("Doctor not found or not verified");
+    // }
+
+    // const availability = await db.availability.findFirst({
+    //   where: {
+    //     doctorId: doctor.id,
+    //     status: "AVAILABLE",
+    //   },
+    // });
+
+    // if (!availability) {
+    //   throw new Error("No availability set by doctor");
+    // }
+
+    // const now = new Date();
+    // const days = [now, addDays(now, 1), addDays(now, 2), addDays(now, 3)];
+
+    // const lastDay = endOfDay(days[3]);
+    // const existingAppointments = await db.appointment.findMany({
+    //   where: {
+    //     doctorId: doctor.id,
+    //     status: "SCHEDULED",
+    //     startTime: {
+    //       lte: lastDay,
+    //     },
+    //   },
+    // });
+
+    // const availableSlotsByDay = {};
+
+    // for (const day of days) {
+    //   const dayString = format(day, "yyyy-MM-dd");
+    //   availableSlotsByDay[dayString] = [];
+
+    //   const availabilityStart = new Date(availability.startTime);
+    //   const availabilityEnd = new Date(availability.endTime);
+
+    //   availabilityStart.setFullYear(
+    //     day.getFullYear(),
+    //     day.getMonth(),
+    //   availabilityStart.setFullYear(
+    //     day.getFullYear(),
+    //     day.getMonth(),
+    //     day.getDate()
+    //   );
+    //   availabilityEnd.setFullYear(
+    //     day.getFullYear(),
+    //     day.getMonth(),
+    //     day.getDate()
+    //   );
+
+    //   let current = new Date(availabilityStart);
+    //   const end = new Date(availabilityEnd);
+
+    //   while (
+    //     isBefore(addMinutes(current, 30), end) ||
+    //     +addMinutes(current, 30) === +end
+    //   ) {
+    //     const next = addMinutes(current, 30);
+
+    //     if (isBefore(current, now)) {
+    //       current = next;
+    //       continue;
+    //     }
+
+    //     const overlaps = existingAppointments.some((appointment) => {
+    //       const aStart = new Date(appointment.startTime);
+    //       const aEnd = new Date(appointment.endTime);
+
+    //       return (
+    //         (current >= aStart && current < aEnd) ||
+    //         (next > aStart && next <= aEnd) ||
+    //         (current <= aStart && next >= aEnd)
+    //       );
+    //     });
+
+    //     if (!overlaps) {
+    //       availableSlotsByDay[dayString].push({
+    //         startTime: current.toISOString(),
+    //         endTime: next.toISOString(),
+    //         formatted: `${format(current, "h:mm a")} - ${format(
+    //           next,
+    //           "h:mm a"
+    //         )}`,
+    //         day: format(current, "EEEE, MMMM d"),
+    //       });
+    //     }
+
+    //     current = next;
+    //   }
+    // }
+
+    // const result = Object.entries(availableSlotsByDay).map(([date, slots]) => ({
+    //   date,
+    //   displayDate:
+    //     slots.length > 0
+    //       ? slots[0].day
+    //       : format(new Date(date), "EEEE, MMMM d"),
+    //   slots,
+    // }));
+
+    // return { days: result };
   } catch (error) {
     console.error("Failed to fetch available slots:", error);
-    throw new Error("Failed to fetch available time slots: " + error.message);
+    return {
+      success: false,
+      error: error.message || "Failed to fetch available time slots"
+    };
   }
 }
 
