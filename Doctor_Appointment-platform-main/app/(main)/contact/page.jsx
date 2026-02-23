@@ -41,8 +41,7 @@ export default function ContactPage() {
               <CardTitle className="text-xl text-white">Email Us</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-2">kushwahaarpit360@gmail.com</p>
-              <p className="text-muted-foreground">arpitkushwaha4107@gmail.com</p>
+              <p className="text-muted-foreground mb-2">sharmashivam8970@gmail.com</p>
               <p className="text-sm text-muted-foreground/70 mt-3">
                 We typically respond within 24 hours
               </p>
@@ -57,7 +56,7 @@ export default function ContactPage() {
               <CardTitle className="text-xl text-white">Call Us</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-2">+91 9580271088</p>
+              <p className="text-muted-foreground mb-2">+91 8770742120</p>
               
               <p className="text-sm text-muted-foreground/70 mt-3">
                 Available Mon-Fri, 9AM-6PM EST
@@ -73,8 +72,8 @@ export default function ContactPage() {
               <CardTitle className="text-xl text-white">Visit Us</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground mb-2">Prayagraj, Uttar Pradesh</p>
-              <p className="text-muted-foreground">Medical District, Prayagraj</p>
+              <p className="text-muted-foreground mb-2">Indore, Madhya Pradesh</p>
+              <p className="text-muted-foreground">Medical District, Indore</p>
               <p className="text-sm text-muted-foreground/70 mt-3">
                 By appointment only
               </p>
@@ -115,7 +114,7 @@ export default function ContactPage() {
                   <div className="space-y-2 text-muted-foreground">
                     <div className="flex justify-between">
                       <span>24/7 Hotline</span>
-                      <span>+91 9580271088</span>
+                      <span>+91 8770742120</span>
                     </div>
                     <div className="text-sm text-muted-foreground/70 mt-3">
                       For urgent medical emergencies, please call 911 or visit your nearest emergency room.
